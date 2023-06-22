@@ -1,13 +1,24 @@
 #include "EPD_7in5b_V2.h"
+#include <stdbool.h>
 
-#define WHITE   0xFF
-#define BLACK   0x00
+#define WHITE 0xFF
+#define BLACK 0x00
 
-int loadFromBMP(UBYTE *imgCache, const char *bmpPath)
+int loadAndDrawBMP(UBYTE *blackImgCache, const char *blackBMPPath, UBYTE *redImgCache, const char *redBMPPath)
 {
-    Paint_SelectImage(imgCache);
+    EPD_7IN5B_V2_Init();
+
+    Paint_SelectImage(blackImgCache);
     Paint_Clear(WHITE);
-    GUI_ReadBmp(bmpPath, 0, 0);
+    GUI_ReadBmp(blackBMPPath, 0, 0);
+
+    Paint_SelectImage(redImgCache);
+    Paint_Clear(WHITE);
+    GUI_ReadBmp(redBMPPath, 0, 0);
+
+    EPD_7IN5B_V2_Display(blackImgCache, redImgCache);
+
+    EPD_7IN5B_V2_Sleep();
 }
 
 // Clears screen and safely exits the program
@@ -65,13 +76,44 @@ int main()
     Paint_NewImage(blackImg, EPD_7IN5B_V2_WIDTH, EPD_7IN5B_V2_HEIGHT, 0, WHITE);
     Paint_NewImage(redImg, EPD_7IN5B_V2_WIDTH, EPD_7IN5B_V2_HEIGHT, 0, WHITE);
 
-    loadFromBMP(blackImg, "./imgs/Travis.bmp");
-    loadFromBMP(redImg, "./imgs/Goblins.bmp");
+    // Display Arkhe logo
+    Paint_SelectImage(blackImg);
+    Paint_Clear(WHITE);
+    GUI_ReadBmp("./imgs/ArkheLogo_b.bmp");
+
+    Paint_SelectImage(redImg);
+    Paint_Clear(WHITE);
+    GUI_ReadBmp("./imgs/ArkheLogo_r.bmp");
+
     EPD_7IN5B_V2_Display(blackImg, redImg);
-    
-    printf("Press enter...\r\n");
-    scanf("%s");
+    EPD_7IN5B_V2_Sleep(); // This is all an evil trick to ensure the e-Paper is in sleep mode for the loop >:)
+
+    bool isRunning = true;
+    while (isRunning = true)
+    {
+        printf("Enter selection (1, 2, q): ");
+
+        char input;
+        fgets(input, 1, stdin);
+
+        switch (input)
+        {
+        case 1:
+            loadAndDrawBMP(blackImg, "./imgs/TravisGoblins_b.bmp", redImg, "./imgs/TravisGoblins_r.bmp");
+            break;
+
+        case 2:
+            loadAndDrawBMP(blackImg, "./img/HeWillDie_b.bmp", redImg, "./img/HeWillDie_r.bmp");
+            break;
+
+        default:
+            isRunning = false;
+        }
+    }
+
+    /* TODO:
+     *  -Make blackImg and redImg vaguely global so i can stop passing them to every function
+     */
 
     exit(blackImg, redImg);
-
 }
