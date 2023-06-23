@@ -1,23 +1,27 @@
 #include "EPD_7in5b_V2.h"
-#include <stdbool.h>
 
 #define WHITE 0xFF
 #define BLACK 0x00
 
 int loadAndDrawBMP(UBYTE *blackImgCache, const char *blackBMPPath, UBYTE *redImgCache, const char *redBMPPath)
 {
+    printf("Init.\r\n");
     EPD_7IN5B_V2_Init();
 
+    printf("Reading black BMP...\r\n");
     Paint_SelectImage(blackImgCache);
     Paint_Clear(WHITE);
     GUI_ReadBmp(blackBMPPath, 0, 0);
 
+    printf("Reading red BMP...\r\n");
     Paint_SelectImage(redImgCache);
     Paint_Clear(WHITE);
     GUI_ReadBmp(redBMPPath, 0, 0);
 
+    printf("Displaying...\r\n");
     EPD_7IN5B_V2_Display(blackImgCache, redImgCache);
 
+    printf("oing to sleep...\r\n");
     EPD_7IN5B_V2_Sleep();
 }
 
@@ -72,43 +76,52 @@ int main()
     }
 
     // Creating image buffers
-    printf("Creating image buffers...");
+    printf("Creating image buffers...\r\n");
     Paint_NewImage(blackImg, EPD_7IN5B_V2_WIDTH, EPD_7IN5B_V2_HEIGHT, 0, WHITE);
     Paint_NewImage(redImg, EPD_7IN5B_V2_WIDTH, EPD_7IN5B_V2_HEIGHT, 0, WHITE);
 
     // Display Arkhe logo
     Paint_SelectImage(blackImg);
     Paint_Clear(WHITE);
-    GUI_ReadBmp("./imgs/ArkheLogo_b.bmp");
+    GUI_ReadBmp("./imgs/ArkheLogo_b.bmp", 0, 0);
 
     Paint_SelectImage(redImg);
     Paint_Clear(WHITE);
-    GUI_ReadBmp("./imgs/ArkheLogo_r.bmp");
+    GUI_ReadBmp("./imgs/ArkheLogo_r.bmp", 0, 0);
 
     EPD_7IN5B_V2_Display(blackImg, redImg);
     EPD_7IN5B_V2_Sleep(); // This is all an evil trick to ensure the e-Paper is in sleep mode for the loop >:)
 
-    bool isRunning = true;
-    while (isRunning = true)
+    int isRunning = 1;
+    while (isRunning = 1)
     {
-        printf("Enter selection (1, 2, q): ");
-
         char input;
-        fgets(input, 1, stdin);
+        printf("Enter selection (1, 2, 3, or q): ");
+        input = getchar();
+        printf("\r\n");
 
         switch (input)
         {
-        case 1:
+        case '1':
             loadAndDrawBMP(blackImg, "./imgs/TravisGoblins_b.bmp", redImg, "./imgs/TravisGoblins_r.bmp");
             break;
 
-        case 2:
-            loadAndDrawBMP(blackImg, "./img/HeWillDie_b.bmp", redImg, "./img/HeWillDie_r.bmp");
+        case '2':
+            loadAndDrawBMP(blackImg, "./imgs/HeWillDie_b.bmp", redImg, "./imgs/HeWillDie_r.bmp");
             break;
 
+        case '3':
+            loadAndDrawBMP(blackImg, "./imgs/Beach_b.bmp", redImg, "./imgs/Beach_r.bmp");
+            break;
+
+        case 'q':
+            EPD_7IN5B_V2_Init();
+            return exit(blackImg, redImg);
         default:
-            isRunning = false;
+            isRunning = 0;
         }
+
+        fflush(stdin); // I AM GOING TO KILL MYSELF
     }
 
     /* TODO:
