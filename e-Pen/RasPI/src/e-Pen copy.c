@@ -23,10 +23,6 @@ int loadAndDrawBMP(UBYTE *blackImgCache, const char *blackBMPPath, UBYTE *redImg
 
     printf("Going to sleep...\r\n");
     EPD_7IN5B_V2_Sleep();
-
-    printf("Exiting DEV Module...\r\n");
-    DEV_Module_Exit();
-    printf("Goodbye...\r\n");
 }
 
 // Clears screen and safely exits the program
