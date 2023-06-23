@@ -1,0 +1,17 @@
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -D USE_BCM2835_LIB -D RPI -c	 ./lib/Config/dev_hardware_SPI.c -o ./bin/dev_hardware_SPI.o -Wl,--gc-sections -lbcm2835 -lm  -D DEBUG
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -c	lib/e-Paper/EPD_7in5b_V2.c -o bin/EPD_7in5b_V2.o -I ./lib/Config -D DEBUG
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -c	lib/GUI/GUI_BMPfile.c -o bin/GUI_BMPfile.o -I ./lib/Config -D DEBUG
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -c	lib/GUI/GUI_Paint.c -o bin/GUI_Paint.o -I ./lib/Config -D DEBUG
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -c	src/e-Pen.c -o bin/e-Pen.o -I ./lib/Config -I ./lib/GUI -I ./lib/e-Paper -D DEBUG
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -D USE_BCM2835_LIB -D RPI -c	 ./lib/Config/RPI_sysfs_gpio.c -o ./bin/RPI_sysfs_gpio.o -Wl,--gc-sections -lbcm2835 -lm  -D DEBUG
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -c	lib/Fonts/font12.c -o bin/font12.o -D DEBUG
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -D USE_BCM2835_LIB -D RPI -c	 ./lib/Config/DEV_Config.c -o ./bin/DEV_Config.o -Wl,--gc-sections -lbcm2835 -lm  -D DEBUG
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -c	lib/Fonts/font12CN.c -o bin/font12CN.o -D DEBUG
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -c	lib/Fonts/font16.c -o bin/font16.o -D DEBUG
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -c	lib/Fonts/font20.c -o bin/font20.o -D DEBUG
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -c	lib/Fonts/font24.c -o bin/font24.o -D DEBUG
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -c	lib/Fonts/font24CN.c -o bin/font24CN.o -D DEBUG
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -c	lib/Fonts/font8.c -o bin/font8.o -D DEBUG
+echo RPI_epd
+RPI_epd
+gcc -g -O -ffunction-sections -fdata-sections -Wall -D NULL -D RPI ./bin/EPD_7in5b_V2.o ./bin/GUI_BMPfile.o ./bin/GUI_Paint.o ./bin/e-Pen.o ./bin/font12.o ./bin/font12CN.o ./bin/font16.o ./bin/font20.o ./bin/font24.o ./bin/font24CN.o ./bin/font8.o ./bin/dev_hardware_SPI.o ./bin/RPI_sysfs_gpio.o ./bin/DEV_Config.o -o e-Pen -Wl,--gc-sections -lbcm2835 -lm  -D DEBUG

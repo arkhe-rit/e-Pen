@@ -1,13 +1,28 @@
 #include "EPD_7in5b_V2.h"
 
-#define WHITE   0xFF
-#define BLACK   0x00
+#define WHITE 0xFF
+#define BLACK 0x00
 
-int loadFromBMP(UBYTE *imgCache, const char *bmpPath)
+int loadAndDrawBMP(UBYTE *blackImgCache, const char *blackBMPPath, UBYTE *redImgCache, const char *redBMPPath)
 {
-    Paint_SelectImage(imgCache);
+    printf("Init.\r\n");
+    EPD_7IN5B_V2_Init();
+
+    printf("Reading black BMP...\r\n");
+    Paint_SelectImage(blackImgCache);
     Paint_Clear(WHITE);
-    GUI_ReadBmp(bmpPath, 0, 0);
+    GUI_ReadBmp(blackBMPPath, 0, 0);
+
+    printf("Reading red BMP...\r\n");
+    Paint_SelectImage(redImgCache);
+    Paint_Clear(WHITE);
+    GUI_ReadBmp(redBMPPath, 0, 0);
+
+    printf("Displaying...\r\n");
+    EPD_7IN5B_V2_Display(blackImgCache, redImgCache);
+
+    printf("Going to sleep...\r\n");
+    EPD_7IN5B_V2_Sleep();
 }
 
 // Clears screen and safely exits the program
@@ -61,17 +76,58 @@ int main()
     }
 
     // Creating image buffers
-    printf("Creating image buffers...");
+    printf("Creating image buffers...\r\n");
     Paint_NewImage(blackImg, EPD_7IN5B_V2_WIDTH, EPD_7IN5B_V2_HEIGHT, 0, WHITE);
     Paint_NewImage(redImg, EPD_7IN5B_V2_WIDTH, EPD_7IN5B_V2_HEIGHT, 0, WHITE);
 
-    loadFromBMP(blackImg, "./imgs/Travis.bmp");
-    loadFromBMP(redImg, "./imgs/Goblins.bmp");
+    // Display Arkhe logo
+    Paint_SelectImage(blackImg);
+    Paint_Clear(WHITE);
+    GUI_ReadBmp("./imgs/ArkheLogo_b.bmp", 0, 0);
+
+    Paint_SelectImage(redImg);
+    Paint_Clear(WHITE);
+    GUI_ReadBmp("./imgs/ArkheLogo_r.bmp", 0, 0);
+
     EPD_7IN5B_V2_Display(blackImg, redImg);
-    
-    printf("Press enter...\r\n");
-    scanf("%s");
+    EPD_7IN5B_V2_Sleep(); // This is all an evil trick to ensure the e-Paper is in sleep mode for the loop >:)
+
+    int isRunning = 1;
+    while (isRunning = 1)
+    {
+        char input;
+        printf("Enter selection (1, 2, 3, or q): ");
+        input = getchar();
+        printf("\r\n");
+
+        switch (input)
+        {
+        case '1':
+            loadAndDrawBMP(blackImg, "./imgs/TravisGoblins_b.bmp", redImg, "./imgs/TravisGoblins_r.bmp");
+            break;
+
+        case '2':
+            loadAndDrawBMP(blackImg, "./imgs/HeWillDie_b.bmp", redImg, "./imgs/HeWillDie_r.bmp");
+            break;
+
+        case '3':
+            loadAndDrawBMP(blackImg, "./imgs/Beach_b.bmp", redImg, "./imgs/Beach_r.bmp");
+            break;
+
+        case 'q':
+            EPD_7IN5B_V2_Init();
+            return exit(blackImg, redImg);
+
+        default:
+            continue;
+        }
+
+        fflush(stdin); // I AM GOING TO KILL MYSELF
+    }
+
+    /* TODO:
+     *  -Make blackImg and redImg vaguely global so i can stop passing them to every function
+     */
 
     exit(blackImg, redImg);
-
 }
