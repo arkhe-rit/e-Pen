@@ -3,28 +3,6 @@
 #define WHITE 0xFF
 #define BLACK 0x00
 
-int loadAndDrawBMP(UBYTE *blackImgCache, const char *blackBMPPath, UBYTE *redImgCache, const char *redBMPPath)
-{
-    printf("Init.\r\n");
-    EPD_7IN5B_V2_Init();
-
-    printf("Reading black BMP...\r\n");
-    Paint_SelectImage(blackImgCache);
-    Paint_Clear(WHITE);
-    GUI_ReadBmp(blackBMPPath, 0, 0);
-
-    printf("Reading red BMP...\r\n");
-    Paint_SelectImage(redImgCache);
-    Paint_Clear(WHITE);
-    GUI_ReadBmp(redBMPPath, 0, 0);
-
-    printf("Displaying...\r\n");
-    EPD_7IN5B_V2_Display(blackImgCache, redImgCache);
-
-    printf("Going to sleep...\r\n");
-    EPD_7IN5B_V2_Sleep();
-}
-
 // Clears screen and safely exits the program
 int exit(UBYTE *blackImage, UBYTE *redImage)
 {
