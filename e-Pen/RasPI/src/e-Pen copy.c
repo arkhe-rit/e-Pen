@@ -94,43 +94,24 @@ int main()
     GUI_ReadBmp("./imgs/ArkheLogo_r.bmp", 0, 0);
 
     EPD_7IN5B_V2_Display(blackImg, redImg);
-    EPD_7IN5B_V2_Sleep(); // This is all an evil trick to ensure the e-Paper is in sleep mode for the loop >:)
 
-    int isRunning = 1;
-    while (isRunning = 1)
-    {
-        char input;
-        printf("Enter selection (1, 2, 3, or q): ");
-        input = getchar();
-        printf("\r\n");
+    // Display next image test 
+    Paint_SelectImage(blackImg);
+    GUI_ReadBmp("./imgs/TravisGoblins_b.bmp");
 
-        switch (input)
-        {
-        case '1':
-            loadAndDrawBMP(blackImg, "./imgs/TravisGoblins_b.bmp", redImg, "./imgs/TravisGoblins_r.bmp");
-            break;
+    Paint_SelectImage(redImg);
+    GUI_ReadBmp("./imgs/TravisGoblins_r.bmp");
 
-        case '2':
-            loadAndDrawBMP(blackImg, "./imgs/HeWillDie_b.bmp", redImg, "./imgs/HeWillDie_r.bmp");
-            break;
+    EPD_7IN5B_V2_Display(blackImg, redImg);
 
-        case '3':
-            loadAndDrawBMP(blackImg, "./imgs/Beach_b.bmp", redImg, "./imgs/Beach_r.bmp");
-            break;
+    // Display next image test 
+    Paint_SelectImage(blackImg);
+    GUI_ReadBmp("./imgs/Beach_b.bmp");
 
-        case 'q':
-            EPD_7IN5B_V2_Init();
-            return exit(blackImg, redImg);
-        default:
-            isRunning = 0;
-        }
+    Paint_SelectImage(redImg);
+    GUI_ReadBmp("./imgs/Beach_r.bmp");
 
-        fflush(stdin); // I AM GOING TO KILL MYSELF
-    }
-
-    /* TODO:
-     *  -Make blackImg and redImg vaguely global so i can stop passing them to every function
-     */
+    EPD_7IN5B_V2_Display(blackImg, redImg);
 
     exit(blackImg, redImg);
 }
