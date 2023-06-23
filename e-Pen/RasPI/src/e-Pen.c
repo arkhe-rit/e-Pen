@@ -117,8 +117,9 @@ int main()
         case 'q':
             EPD_7IN5B_V2_Init();
             return exit(blackImg, redImg);
+
         default:
-            isRunning = 0;
+            continue;
         }
 
         fflush(stdin); // I AM GOING TO KILL MYSELF
