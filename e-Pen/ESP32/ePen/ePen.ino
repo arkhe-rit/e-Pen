@@ -20,8 +20,7 @@ UBYTE *BlackImage, *RYImage;
 unsigned long currentTime = millis();
 unsigned long previousTime = 0;
 const long timeoutTime = 2000;
-unsigned char imgBuffer[48000] = {0xFF};
-unsigned char whiteBuffer[48000] = {0xFF};
+unsigned char* imgBuffer;
 
 void Exit();
 
@@ -31,8 +30,11 @@ void setup()
   Serial.begin(115200);
 
   // EPD Init. and display splash screen
-  printf("EPD_7IN5B_V2_test Demo\r\n");
+  printf("EPD_7IN5B_V2_test Demo (NEW)\r\n");
   DEV_Module_Init();
+
+  printf("Allocating on heap...\r\n");
+  imgBuffer = new unsigned char[48000]{0xFF};
 
   printf("e-Paper Init and Clear...\r\n");
   EPD_7IN5B_V2_Init();
@@ -100,31 +102,39 @@ void loop()
     { // loop while the client's connected
       currentTime = millis();
       if (client.available())
-      {                         // if there's bytes to read from the client,
-        char c = client.read(); // read a byte
-        imgBuffer[index] = c;
-        index++;
+      {
+        //byte dataReceived[1024];
+        //int bytesRead = client.read(dataReceived, sizeof(dataReceived)); // read a byte
+          imgBuffer[index] = client.read();
+          index++;
       }
     }
     // Handle client disconnect
     client.stop();
     printf("Client disconnected.\r\n");
 
-    if (index == (sizeof(imgBuffer) / sizeof(char) - 1))
+    //if (index == (sizeof(imgBuffer) / sizeof(char) - 1))
     {
+      //Serial.println("Size match!");
+      Serial.println("Drawing received data!");
       EPD_7IN5B_V2_Init();
       EPD_7IN5B_V2_Clear();
       EPD_7IN5B_V2_Display(imgBuffer, whiteBuffer);
+      EPD_7IN5B_V2_Sleep();
+      delay(5000);
     }
+    Exit();
   }
-
-  delay(5000);
-  Exit();
 }
 
 /* Exit func ------------------------------------------------------------------*/
 void Exit()
 {
+  Serial.println("Exiting...");
+
+  printf("Init...\r\n");
+  EPD_7IN5B_V2_Init();
+
   printf("Clear...\r\n");
   EPD_7IN5B_V2_Clear();
 
@@ -134,4 +144,8 @@ void Exit()
   free(RYImage);
   BlackImage = NULL;
   RYImage = NULL;
+
+  Serial.println("Deleting imgBuffer...");
+  delete[] imgBuffer;
+  Serial.println("Goodbye!");
 }
