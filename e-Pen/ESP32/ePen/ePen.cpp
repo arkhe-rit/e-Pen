@@ -4,6 +4,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
+#include <Arduino.h>
 #include "DEV_Config.h"
 #include "EPD.h"
 #include "GUI_Paint.h"
@@ -21,18 +22,8 @@ unsigned long currentTime = millis();
 unsigned long previousTime = 0;
 const long timeoutTime = 2000;
 
-/* Exit func ------------------------------------------------------------------*/
-void Exit() {
-  printf("Clear...\r\n");
-  EPD_7IN5B_V2_Clear();
-
-  printf("Goto Sleep...\r\n");
-  EPD_7IN5B_V2_Sleep();
-  free(BlackImage);
-  free(RYImage);
-  BlackImage = NULL;
-  RYImage = NULL;
-}
+void parseRequest();
+void Exit();
 
 /* Entry point ----------------------------------------------------------------*/
 void setup() {
@@ -123,7 +114,7 @@ void loop() {
         }
       }
       // Handle request
-
+      
     }
     // Handle client disconnect
     request = "";
@@ -134,4 +125,17 @@ void loop() {
   // 
 
   //Exit();
+}
+
+/* Exit func ------------------------------------------------------------------*/
+void Exit() {
+  printf("Clear...\r\n");
+  EPD_7IN5B_V2_Clear();
+
+  printf("Goto Sleep...\r\n");
+  EPD_7IN5B_V2_Sleep();
+  free(BlackImage);
+  free(RYImage);
+  BlackImage = NULL;
+  RYImage = NULL;
 }
