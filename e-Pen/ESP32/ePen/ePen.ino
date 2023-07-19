@@ -12,6 +12,9 @@
 #include <stdlib.h>
 #include <WiFi.h>
 
+#define ARR_SIZE 48000
+#define LED_BUILTIN 2
+
 /* Globals --------------------------------------------------------------------*/
 const char *ssid = "apeiron";
 const char *pwrd = "enantiodromia..";
@@ -29,12 +32,15 @@ void setup()
 {
   Serial.begin(115200);
 
+  // Enable onboard LED
+  pinMode(LED_BUILTIN, OUTPUT);
+
   // EPD Init. and display splash screen
   printf("EPD_7IN5B_V2_test Demo (NEW)\r\n");
   DEV_Module_Init();
 
   printf("Allocating on heap...\r\n");
-  imgBuffer = new unsigned char[48000]{0xFF};
+  imgBuffer = new unsigned char[ARR_SIZE]{0xFF};
 
   printf("e-Paper Init and Clear...\r\n");
   EPD_7IN5B_V2_Init();
@@ -88,6 +94,9 @@ void setup()
 /* The main loop -------------------------------------------------------------*/
 void loop()
 {
+  // Create variable for tracking shutdown state
+  bool shouldShutDown = false;
+
   // Listen for clients
   WiFiClient client = server.available();
 
@@ -103,17 +112,29 @@ void loop()
       currentTime = millis();
       if (client.available())
       {
-        //byte dataReceived[1024];
-        //int bytesRead = client.read(dataReceived, sizeof(dataReceived)); // read a byte
-          imgBuffer[index] = client.read();
-          index++;
+        digitalWrite(LED_BUILTIN, HIGH);
+        shouldShutDown = true;
+        imgBuffer[index] = client.read();
+
+        // Check if pure white
+        //if(shouldShutDown && imgBuffer[index] != 0xFF)
+        {
+          shouldShutDown = false;
+        }
+        index++;
       }
     }
     // Handle client disconnect
     client.stop();
     printf("Client disconnected.\r\n");
+    digitalWrite(LED_BUILTIN, LOW);
 
-    //if (index == (sizeof(imgBuffer) / sizeof(char) - 1))
+
+    if(shouldShutDown == true)
+    {
+      Exit();
+    }
+    if (index == ARR_SIZE)
     {
       //Serial.println("Size match!");
       Serial.println("Drawing received data!");
@@ -121,9 +142,8 @@ void loop()
       EPD_7IN5B_V2_Clear();
       EPD_7IN5B_V2_Display(imgBuffer, whiteBuffer);
       EPD_7IN5B_V2_Sleep();
-      delay(5000);
+      Serial.println("Drawing complete!");
     }
-    Exit();
   }
 }
 
@@ -148,4 +168,5 @@ void Exit()
   Serial.println("Deleting imgBuffer...");
   delete[] imgBuffer;
   Serial.println("Goodbye!");
+  esp_deep_sleep_start();
 }
