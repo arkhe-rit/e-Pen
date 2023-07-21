@@ -22,7 +22,7 @@ WiFiServer server(80);
 UBYTE *BlackImage, *RYImage;
 unsigned long currentTime = millis();
 unsigned long previousTime = 0;
-const long timeoutTime = 2000;
+const long timeoutTime = 10000;
 unsigned char* imgBuffer;
 bool shouldShutDown = false;
 
