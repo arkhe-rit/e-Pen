@@ -95,8 +95,9 @@ void loop()
   // Listen for clients
   WiFiClient client = server.available();
 
+  // On new client connection
   if (client)
-  { // If a new client connects,
+  { 
     currentTime = millis();
     previousTime = currentTime;
     Serial.println("New Client.");
