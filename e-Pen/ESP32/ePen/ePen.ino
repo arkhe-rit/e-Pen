@@ -24,6 +24,7 @@ unsigned long currentTime = millis();
 unsigned long previousTime = 0;
 const long timeoutTime = 2000;
 unsigned char* imgBuffer;
+bool shouldShutDown = false;
 
 void Exit();
 
@@ -36,13 +37,15 @@ void setup()
   pinMode(LED_BUILTIN, OUTPUT);
 
   // EPD Init. and display splash screen
-  printf("EPD_7IN5B_V2_test Demo (NEW)\r\n");
+  Serial.println("====================================");
+  Serial.println("EPD_7IN5B_V2_test Demo (NEW)");
+  Serial.println("====================================");
   DEV_Module_Init();
 
-  printf("Allocating on heap...\r\n");
+  Serial.println("Allocating on heap...");
   imgBuffer = new unsigned char[ARR_SIZE]{0xFF};
 
-  printf("e-Paper Init and Clear...\r\n");
+  Serial.println("e-Paper Init and Clear...");
   EPD_7IN5B_V2_Init();
   EPD_7IN5B_V2_Clear();
   DEV_Delay_ms(500);
@@ -51,13 +54,13 @@ void setup()
   UWORD Imagesize = ((EPD_7IN5B_V2_WIDTH % 8 == 0) ? (EPD_7IN5B_V2_WIDTH / 8) : (EPD_7IN5B_V2_WIDTH / 8 + 1)) * EPD_7IN5B_V2_HEIGHT;
   if ((BlackImage = (UBYTE *)malloc(Imagesize)) == NULL)
   {
-    printf("Failed to apply for black memory...\r\n");
+    Serial.println("Failed to apply for black memory...");
     while (1)
       ;
   }
   if ((RYImage = (UBYTE *)malloc(Imagesize)) == NULL)
   {
-    printf("Failed to apply for red memory...\r\n");
+    Serial.println("Failed to apply for red memory...");
     while (1)
       ;
   }
@@ -69,20 +72,24 @@ void setup()
   Paint_Clear(WHITE);
 
   // show splash screen
-  printf("Displaying splash screen...\r\n");
+  Serial.println("Displaying splash screen...");
   EPD_7IN5B_V2_Display(arkheLogo_b, arkheLogo_r);
   Serial.println("Clear...");
   EPD_7IN5B_V2_Clear();
   EPD_7IN5B_V2_Sleep();
 
   // Attempt to connect to WiFi
-  printf("Attempting to connect to \"%s\"...\r\n", ssid);
+  Serial.print("Attempting to connect to \"");
+  Serial.print(ssid);
+  Serial.println("...");
+
   WiFi.begin(ssid, pwrd);
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
-    printf(".");
+    Serial.print(".");
   }
+  
   // Print local IP address and start web server
   Serial.println("");
   Serial.println("WiFi connected.");
@@ -94,9 +101,6 @@ void setup()
 /* The main loop -------------------------------------------------------------*/
 void loop()
 {
-  // Create variable for tracking shutdown state
-  bool shouldShutDown = false;
-
   // Listen for clients
   WiFiClient client = server.available();
 
@@ -104,35 +108,37 @@ void loop()
   { // If a new client connects,
     currentTime = millis();
     previousTime = currentTime;
-    printf("New Client.\r\n");
+    Serial.println("New Client.");
+
+    shouldShutDown = true;
 
     unsigned int index = 0;
-    while (client.connected() && currentTime - previousTime <= timeoutTime)
-    { // loop while the client's connected
+    while (client.connected() && currentTime - previousTime <= timeoutTime) // loop while the client's connected
+    { 
       currentTime = millis();
       if (client.available())
       {
-        digitalWrite(LED_BUILTIN, HIGH);
-        shouldShutDown = true;
+        digitalWrite(LED_BUILTIN, HIGH); // Turn on LED when client connects
         imgBuffer[index] = client.read();
 
         // Check if pure white
-        //if(shouldShutDown && imgBuffer[index] != 0xFF)
+        if(shouldShutDown == true && imgBuffer[index] != 0xFF)
         {
           shouldShutDown = false;
         }
         index++;
       }
     }
+
     // Handle client disconnect
     client.stop();
-    printf("Client disconnected.\r\n");
+    Serial.println("Client disconnected.");
     digitalWrite(LED_BUILTIN, LOW);
 
 
     if(shouldShutDown == true)
     {
-      Exit();
+      exit();
     }
     if (index == ARR_SIZE)
     {
@@ -148,17 +154,17 @@ void loop()
 }
 
 /* Exit func ------------------------------------------------------------------*/
-void Exit()
+void exit()
 {
   Serial.println("Exiting...");
 
-  printf("Init...\r\n");
+  Serial.println("Init...");
   EPD_7IN5B_V2_Init();
 
-  printf("Clear...\r\n");
+  Serial.println("Clear...");
   EPD_7IN5B_V2_Clear();
 
-  printf("Goto Sleep...\r\n");
+  Serial.println("Goto Sleep...");
   EPD_7IN5B_V2_Sleep();
   free(BlackImage);
   free(RYImage);
@@ -168,5 +174,6 @@ void Exit()
   Serial.println("Deleting imgBuffer...");
   delete[] imgBuffer;
   Serial.println("Goodbye!");
+
   esp_deep_sleep_start();
 }
