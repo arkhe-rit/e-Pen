@@ -38,7 +38,7 @@ void setup()
 
   // EPD Init. and display splash screen
   Serial.println("====================================");
-  Serial.println("EPD_7IN5B_V2_test Demo (NEW)");
+  Serial.println("EPD_7IN5B_V2 Server v0.1");
   Serial.println("====================================");
   DEV_Module_Init();
 
