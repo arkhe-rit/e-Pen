@@ -18,6 +18,7 @@
 /* Globals --------------------------------------------------------------------*/
 const char *ssid = "apeiron";
 const char *pwrd = "enantiodromia..";
+
 WiFiServer server(80);
 unsigned long currentTime = millis();
 unsigned long previousTime = 0;
@@ -64,10 +65,11 @@ void setup()
   WiFi.begin(ssid, pwrd);
   while (WiFi.status() != WL_CONNECTED)
   {
-    digitalWrite(LED_BUILTIN, HIGH); // Flashes light while awaiting connection (in theory)
-    delay(500);
+    digitalWrite(LED_BUILTIN, HIGH); // Quickly blinks light while awaiting connection
+    delay(250);
     Serial.print(".");
     digitalWrite(LED_BUILTIN, LOW);
+    delay(250);
   }
   
   // Print local IP address and start web server
@@ -81,7 +83,7 @@ void setup()
   Paint_NewImage(imgBuffer, EPD_7IN5B_V2_WIDTH, EPD_7IN5B_V2_HEIGHT, 0, WHITE);
   Paint_SelectImage(imgBuffer);
   Paint_Clear(WHITE);
-  Paint_DrawString_EN(10, 0, WiFi.localIP().toString().c_str(), &Font24, WHITE, BLACK);
+  Paint_DrawString_EN(10, 10, WiFi.localIP().toString().c_str(), &Font24, WHITE, BLACK);
   EPD_7IN5B_V2_Display(imgBuffer, whiteBuffer);
   Paint_Clear(WHITE);
   EPD_7IN5B_V2_Sleep();
@@ -160,5 +162,12 @@ void exit()
   imgBuffer = NULL;
   Serial.println("Goodbye!");
 
-  esp_deep_sleep_start();
+  // Slowly blinks light to show system is ready to shut off
+  while(true)
+  {
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(1000);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(1000);
+  }
 }
