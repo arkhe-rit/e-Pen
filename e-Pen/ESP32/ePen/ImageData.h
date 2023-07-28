@@ -34,8 +34,7 @@
 
 extern const unsigned char arkheLogo_b[];
 extern const unsigned char arkheLogo_r[];
-extern const unsigned char travisGoblins_b[];
-extern const unsigned char travisGoblins_r[];
+extern const unsigned char whiteBuffer[];
 
 #endif
 /* FILE END */
