@@ -1,10 +1,44 @@
 #include "EPD_7in5b_V2.h"
 #include "hiredis.h"
+#include "async.h"
+#include "adapters/libevent.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <signal.h>
 
 #define WHITE 0xFF
 #define BLACK 0x00
 
-int loadAndDrawBMP(UBYTE *blackImgCache, const char *blackBMPPath, UBYTE *redImgCache, const char *redBMPPath)
+#define REDIS_DEFAULT_IP "127.0.0.1";
+#define REDIS_DEFAULT_PORT 6379;
+
+#define REDIS_SUB_CMD "SUBSCRIBE projector/eink"
+
+const char* redisIP = "127.0.0.1";
+int redisPort = 6379;
+
+void onMessage(redisAsyncContext *c, void *reply, void *privdata) {
+    printf("Received message!\r\n");
+    redisReply *r = reply;
+    if (reply == NULL) {
+        printf("Message is NULL :(\r\n");
+        return;
+    }
+
+    printf("Message is not NULL :)\r\n");
+    if (r->type == REDIS_REPLY_STRING){
+        printf("String received: %s\r\n", r->str);
+    }
+
+    if (r->type == REDIS_REPLY_ARRAY) {
+        for (int j = 0; j < r->elements; j++) {
+            printf("%u) %s\n", j, r->element[j]->str);
+        }
+    }
+}
+
+void loadAndDrawBMP(UBYTE *blackImgCache, const char *blackBMPPath, UBYTE *redImgCache, const char *redBMPPath)
 {
     printf("Init.\r\n");
     EPD_7IN5B_V2_Init();
@@ -26,9 +60,12 @@ int loadAndDrawBMP(UBYTE *blackImgCache, const char *blackBMPPath, UBYTE *redImg
     EPD_7IN5B_V2_Sleep();
 }
 
-// Clears screen and safely exits the program
-int exit(UBYTE *blackImage, UBYTE *redImage)
+// Clears screen and safely shutd down the EPD
+void exitDisplay(UBYTE *blackImage, UBYTE *redImage)
 {
+    printf("Wake display...\r\n");
+    EPD_7IN5B_V2_Init();
+
     printf("Clearing screen...\r\n");
     EPD_7IN5B_V2_Clear();
 
@@ -44,12 +81,40 @@ int exit(UBYTE *blackImage, UBYTE *redImage)
 
     printf("Closing power line...\r\n");
     DEV_Module_Exit();
-
-    return 0;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+    // UNIX moment
+    if(geteuid())
+    {
+        printf("ERROR: Please run this program as root.\r\n");
+        return 1;
+    }
+
+    /*
+    int bufsize = 16;
+    char* redisIP = malloc(bufsize * sizeof(char));
+    int redisPort;
+
+    // Handle commandline args
+    if(argc > 2){
+        for(unsigned int i = 0; i < argc; i++){
+            switch()
+        }
+    }
+    else{
+        redisIP = REDIS_DEFAULT_IP;
+        redisPort = REDIS_DEFAULT_PORT;
+    }
+
+    printf("Redis IP: %s\r\n", redisIP);
+    int i = 15553; // I'm just checking for an overflow
+    i++;
+    printf("Redis Port: %s\r\n", redisPort);
+    sleep(10); // DEBUG for sure
+    */
+
     printf("Arkhe e-Pen for Waveshare 7.5\" (B)\r\n");
 
     // Init. device & pins
@@ -93,25 +158,38 @@ int main()
     EPD_7IN5B_V2_Display(blackImg, redImg);
     EPD_7IN5B_V2_Sleep(); // This is all an evil trick to ensure the e-Paper is in sleep mode for the loop >:)
 
-    redisContext *c = redisConnect("127.0.0.1", 6379);
-    if (c == NULL || c->err)
-    {
-        if (c)
-        {
-            printf("Error: %s\n", c->errstr);
-            // handle error
-        }
-        else
-        {
-            printf("Can't allocate redis context\n");
-        }
+    // Create connect to redis (thanks to https://github.com/redis/hiredis/issues/55#issuecomment-4269731)
+    printf("Attempting to connect to Redis...\r\n");
+    struct event_base *base = event_base_new();
+
+    redisAsyncContext *c = redisAsyncConnect(redisIP, redisPort);
+    if (c->err){
+        printf("Error: %s\n", c->errstr);
+        redisAsyncFree(c);
+        c = NULL;
+        return 1;
+    }
+    printf("Success!\r\n");
+    if(redisLibeventAttach(c, base) == REDIS_OK){
+        printf("Attached to libevent!\r\n");
+    }
+    else{
+        printf("ERROR: Unable to attach libevent!\r\n");
+        return 1;
+    }
+    redisAsyncCommand(c, onMessage, NULL, REDIS_SUB_CMD);
+    printf("Ran ");
+    printf(REDIS_SUB_CMD);
+    printf("\r\n");
+    while(1){ // DEBUG
+    event_base_dispatch(base);
     }
 
-    fflush(stdin); // I AM GOING TO KILL MYSELF
+    printf("Initializing exit sequence...\r\n"); // DEBUG
+    exitDisplay(blackImg, redImg);
+
+    printf("Disconnecting from Redis...\r\n");
+    redisAsyncFree(c);
+
+    return 0;
 }
-
-/* TODO:
- *  -Make blackImg and redImg vaguely global so i can stop passing them to every function
- */
-
-exit(blackImg, redImg);
