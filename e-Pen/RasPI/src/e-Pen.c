@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
+#include <assert.h>
 
 #define WHITE 0xFF
 #define BLACK 0x00
@@ -15,7 +16,43 @@
 
 #define REDIS_SUB_CMD "SUBSCRIBE channel projector/eink"
 
-enum messageProperty = {type, command, value};
+// This function is INSANELY memory unsafe. Please make sure dest is large enough to fit the substring + terminator!!!!!!
+int parseMessageProperty(const char *source, char *dest, const char *substring)
+{
+    // Search source for substring
+    char *propCurrent = strstr(source, substring);
+    if (propCurrent == NULL)
+    {
+        return 0;
+    }
+    propCurrent += strlen(substring);
+
+    // Get ptr to beginning of property
+    while ((char)(*propCurrent) != '\"')
+    {
+        propCurrent++;
+    }
+    propCurrent++;
+
+    // Get ptr to end of property
+    char *propEnd = propCurrent;
+    while ((char)(*(propEnd + 1)) != '\"')
+    {
+        propEnd++;
+    }
+    propEnd++;
+
+    // Copy to value
+    while (propCurrent < propEnd)
+    {
+        *dest = *propCurrent;
+        dest++;
+        propCurrent++;
+    }
+    dest++;
+    *dest = '\0';
+    return 1;
+}
 
 void onMessage(const redisAsyncContext *c, void *reply, void *privdata)
 {
@@ -24,21 +61,51 @@ void onMessage(const redisAsyncContext *c, void *reply, void *privdata)
     {
         return;
     }
-    
+
     if (r->type == REDIS_REPLY_ARRAY)
     {
-        printf("Array Received: \r\n")
+        printf("Array Received: \r\n");
         for (int j = 0; j < r->elements; j++)
         {
             printf("%u) %s\n", j, r->element[j]->str);
         }
 
+        if (r->element[2]->str == NULL)
+        {
+            return;
+        }
+
+        // Create array for message handling
+        // char *message[3];
+        printf("Creating strings\r\n"); // DEBUG
+        char msgType[strlen(r->element[2]->str) + 1];
+        char msgCmd[strlen(r->element[2]->str) + 1];
+        char msgValue[strlen(r->element[2]->str) + 1];
+
+        // if (!parseMessageProperty(r->element[2]->str, msgType, "\"type\":") ||
+        //     !parseMessageProperty(r->element[2]->str, msgCmd, "\"command\":") ||
+        //     !parseMessageProperty(r->element[2]->str, msgValue, "\"value\":"))
+        // {
+        //     printf("Not a command.\r\n");
+        //     return;
+        // }
+        printf("Attempting to parse\r\n"); // DEBUG
+        if (parseMessageProperty(r->element[2]->str, msgType, "\"type\":"))
+        {
+            printf("Success?\r\n");
+            printf("msgType: %s\r\n", msgType);
+        }
+        else
+        {
+            printf("ERROR! No shot your memory is safe rn\r\n");
+        }
     }
 }
 
 int onConnect(const redisAsyncContext *c, int status)
 {
-    if(status != REDIS_OK){
+    if (status != REDIS_OK)
+    {
         printf("ERROR: %s\r\n", c->errstr);
         return 1;
     }
@@ -48,7 +115,8 @@ int onConnect(const redisAsyncContext *c, int status)
 
 void onDisconnect(const redisAsyncContext *c, int status)
 {
-    if(status != REDIS_OK){
+    if (status != REDIS_OK)
+    {
         printf("ERROR: %s\r\n", c->errstr);
         return;
     }
@@ -142,6 +210,7 @@ int main(int argc, char *argv[])
     Paint_NewImage(redImg, EPD_7IN5B_V2_WIDTH, EPD_7IN5B_V2_HEIGHT, 0, WHITE);
 
     // Display Arkhe logo
+    /*
     Paint_SelectImage(blackImg);
     Paint_Clear(WHITE);
     GUI_ReadBmp("./imgs/ArkheLogo_b.bmp", 0, 0);
@@ -151,7 +220,7 @@ int main(int argc, char *argv[])
     GUI_ReadBmp("./imgs/ArkheLogo_r.bmp", 0, 0);
 
     EPD_7IN5B_V2_Display(blackImg, redImg);
-    
+    */
     EPD_7IN5B_V2_Sleep(); // This is all an evil trick to ensure the e-Paper is in sleep mode for the loop >:)
 
     // Create connection to Redis
