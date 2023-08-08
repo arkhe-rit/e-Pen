@@ -6,54 +6,27 @@
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
-#include <assert.h>
+#include <json.h>
 
 #define WHITE 0xFF
 #define BLACK 0x00
 
-#define REDIS_DEFAULT_IP "172.20.10.3"
+#define REDIS_DEFAULT_IP "192.168.2.10"
 #define REDIS_DEFAULT_PORT 6379
 
 #define REDIS_SUB_CMD "SUBSCRIBE channel projector/eink"
 
-// This function is INSANELY memory unsafe. Please make sure dest is large enough to fit the substring + terminator!!!!!!
-int parseMessageProperty(const char *source, char *dest, const char *substring)
-{
-    // Search source for substring
-    char *propCurrent = strstr(source, substring);
-    if (propCurrent == NULL)
-    {
-        return 0;
-    }
-    propCurrent += strlen(substring);
+#define NUMBER_OF_IMAGES 3
+// #define MAX_IMG_PATH_LENGTH 20
+const char *imgs[NUMBER_OF_IMAGES] = {
+    "./imgs/Beach_b.bmp",
+    "./imgs/HeWillDie_b.bmp",
+    "./imgs/TravisGoblins_b.bmp"};
 
-    // Get ptr to beginning of property
-    while ((char)(*propCurrent) != '\"')
-    {
-        propCurrent++;
-    }
-    propCurrent++;
+UBYTE *blackImg, *redImg;      // Image buffers
+const struct event_base *base; // event base
 
-    // Get ptr to end of property
-    char *propEnd = propCurrent;
-    while ((char)(*(propEnd + 1)) != '\"')
-    {
-        propEnd++;
-    }
-    propEnd++;
-
-    // Copy to value
-    while (propCurrent < propEnd)
-    {
-        *dest = *propCurrent;
-        dest++;
-        propCurrent++;
-    }
-    dest++;
-    *dest = '\0';
-    return 1;
-}
-
+// Callback for received message
 void onMessage(const redisAsyncContext *c, void *reply, void *privdata)
 {
     redisReply *r = reply;
@@ -75,33 +48,49 @@ void onMessage(const redisAsyncContext *c, void *reply, void *privdata)
             return;
         }
 
-        // Create array for message handling
-        // char *message[3];
-        printf("Creating strings\r\n"); // DEBUG
-        char msgType[strlen(r->element[2]->str) + 1];
-        char msgCmd[strlen(r->element[2]->str) + 1];
-        char msgValue[strlen(r->element[2]->str) + 1];
+        printf("Attempting to parse\r\n");
+        struct json_object *jobj;
+        jobj = json_tokener_parse(r->element[2]->str);
+        printf("Parsed Object:\n======\n%s\n======\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_SPACED | JSON_C_TO_STRING_PRETTY));
 
-        // if (!parseMessageProperty(r->element[2]->str, msgType, "\"type\":") ||
-        //     !parseMessageProperty(r->element[2]->str, msgCmd, "\"command\":") ||
-        //     !parseMessageProperty(r->element[2]->str, msgValue, "\"value\":"))
-        // {
-        //     printf("Not a command.\r\n");
-        //     return;
-        // }
-        printf("Attempting to parse\r\n"); // DEBUG
-        if (parseMessageProperty(r->element[2]->str, msgType, "\"type\":"))
+        struct json_object *tmp;
+
+        // Parse type
+        if (!json_object_object_get_ex(jobj, "type", &tmp))
+            return;
+        char *msgType[json_object_get_string_len(tmp)];
+        memset(msgType, 0, sizeof(char) * json_object_get_string_len(tmp));
+        strcpy(msgType, json_object_get_string(tmp));
+        printf("Type: %s\r\n", msgType);
+
+        // Parse command
+        if (!json_object_object_get_ex(jobj, "command", &tmp))
+            return;
+        char *msgCmd[json_object_get_string_len(tmp)];
+        memset(msgCmd, 0, sizeof(char) * json_object_get_string_len(tmp));
+        strcpy(msgCmd, json_object_get_string(tmp));
+        printf("Cmd: %s\r\n", msgCmd);
+
+        if (!strcmp(msgCmd, "shutdown"))
         {
-            printf("Success?\r\n");
-            printf("msgType: %s\r\n", msgType);
+            event_base_loopbreak(base);
+            return;
         }
-        else
-        {
-            printf("ERROR! No shot your memory is safe rn\r\n");
-        }
+
+        // Parse value
+        if (!json_object_object_get_ex(jobj, "value", &tmp))
+            return;
+        int msgValue = json_object_get_int(tmp) % NUMBER_OF_IMAGES;
+        if (errno == EINVAL)
+            return;
+        printf("Value: %i\r\n", msgValue);
+
+        if (!strcmp(msgCmd, "change-image"))
+            loadAndDrawBMP(imgs[msgValue]);
     }
 }
 
+// Callback for redis connect
 int onConnect(const redisAsyncContext *c, int status)
 {
     if (status != REDIS_OK)
@@ -113,6 +102,7 @@ int onConnect(const redisAsyncContext *c, int status)
     return 0;
 }
 
+// Callback for redis disconnect
 void onDisconnect(const redisAsyncContext *c, int status)
 {
     if (status != REDIS_OK)
@@ -123,30 +113,32 @@ void onDisconnect(const redisAsyncContext *c, int status)
     printf("Disconnected successfully!\r\n");
 }
 
-void loadAndDrawBMP(UBYTE *blackImgCache, const char *blackBMPPath, UBYTE *redImgCache, const char *redBMPPath)
+// Loads BMP into black buffer and displays
+void loadAndDrawBMP(const char *blackBMPPath)
 {
     printf("Init.\r\n");
     EPD_7IN5B_V2_Init();
 
     printf("Reading black BMP...\r\n");
-    Paint_SelectImage(blackImgCache);
+    Paint_SelectImage(blackImg);
     Paint_Clear(WHITE);
     GUI_ReadBmp(blackBMPPath, 0, 0);
 
     printf("Reading red BMP...\r\n");
-    Paint_SelectImage(redImgCache);
+    Paint_SelectImage(redImg);
     Paint_Clear(WHITE);
-    GUI_ReadBmp(redBMPPath, 0, 0);
 
     printf("Displaying...\r\n");
-    EPD_7IN5B_V2_Display(blackImgCache, redImgCache);
+    EPD_7IN5B_V2_Display(blackImg, redImg);
 
-    printf("Going to sleep...\r\n");
+    printf("Putting display to sleep...\r\n");
     EPD_7IN5B_V2_Sleep();
+
+    printf("Ready!\r\n\n");
 }
 
-// Clears screen and safely shutd down the EPD
-void exitDisplay(UBYTE *blackImage, UBYTE *redImage)
+// Clears screen and safely shutdown the EPD
+void exitDisplay()
 {
     printf("Wake display...\r\n");
     EPD_7IN5B_V2_Init();
@@ -154,14 +146,14 @@ void exitDisplay(UBYTE *blackImage, UBYTE *redImage)
     printf("Clearing screen...\r\n");
     EPD_7IN5B_V2_Clear();
 
-    printf("Going to sleep...\r\n");
+    printf("Putting display to sleep...\r\n");
     EPD_7IN5B_V2_Sleep();
 
     printf("Clearing images from memory...\r\n");
-    free(blackImage);
-    blackImage = NULL;
-    free(redImage);
-    redImage = NULL;
+    free(blackImg);
+    blackImg = NULL;
+    free(redImg);
+    redImg = NULL;
     DEV_Delay_ms(2500); // Important apparently. Upped time cause 2 seemed iffy. YMMV
 
     printf("Closing power line...\r\n");
@@ -186,12 +178,10 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    // Stealing so much from Waveshare's test file
     printf("e-Paper Init and Clear...\r\n");
     EPD_7IN5B_V2_Init();
 
-    // Create new image cache & init memory
-    UBYTE *blackImg, *redImg;
+    // Init image memory
     UWORD imageSize = ((EPD_7IN5B_V2_WIDTH % 8 == 0) ? (EPD_7IN5B_V2_WIDTH / 8) : (EPD_7IN5B_V2_WIDTH / 8 + 1)) * EPD_7IN5B_V2_HEIGHT;
     if ((blackImg = (UBYTE *)malloc(imageSize)) == NULL)
     {
@@ -210,7 +200,6 @@ int main(int argc, char *argv[])
     Paint_NewImage(redImg, EPD_7IN5B_V2_WIDTH, EPD_7IN5B_V2_HEIGHT, 0, WHITE);
 
     // Display Arkhe logo
-    /*
     Paint_SelectImage(blackImg);
     Paint_Clear(WHITE);
     GUI_ReadBmp("./imgs/ArkheLogo_b.bmp", 0, 0);
@@ -220,12 +209,12 @@ int main(int argc, char *argv[])
     GUI_ReadBmp("./imgs/ArkheLogo_r.bmp", 0, 0);
 
     EPD_7IN5B_V2_Display(blackImg, redImg);
-    */
-    EPD_7IN5B_V2_Sleep(); // This is all an evil trick to ensure the e-Paper is in sleep mode for the loop >:)
+
+    EPD_7IN5B_V2_Sleep();
 
     // Create connection to Redis
     printf("Attempting to connect to Redis...\r\n");
-    const struct event_base *base = event_base_new();
+    base = event_base_new();
 
     redisAsyncContext *c = redisAsyncConnect(REDIS_DEFAULT_IP, REDIS_DEFAULT_PORT);
     if (c->err)
@@ -252,7 +241,7 @@ int main(int argc, char *argv[])
     redisAsyncFree(c);
 
     printf("Beginning to exit...\r\n");
-    exitDisplay(blackImg, redImg);
+    exitDisplay();
 
     return 0;
 }

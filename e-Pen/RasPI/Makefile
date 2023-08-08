@@ -3,6 +3,7 @@ DIR_EPD		 = ./lib/e-Paper
 DIR_FONTS	 = ./lib/Fonts
 DIR_GUI		 = ./lib/GUI
 DIR_REDIS	 = ./lib/Redis
+DIR_JSON	 = /usr/include/json-c
 DIR_SRC 	 = ./src
 DIR_BIN		 = ./bin
 
@@ -11,7 +12,7 @@ OBJ_C_EPD = ${DIR_EPD}/EPD_7in5b_V2.c
 OBJ_C_SRC = ${DIR_SRC}/e-Pen.c
 
 
-OBJ_C = $(wildcard ${OBJ_C_EPD} ${DIR_GUI}/*.c ${DIR_REDIS}/*.c ${OBJ_C_SRC} ${DIR_SRC}/main.c ${DIR_SRC}/ImageData2.c ${DIR_SRC}/ImageData.c ${DIR_FONTS}/*.c )
+OBJ_C = $(wildcard ${OBJ_C_EPD} ${DIR_GUI}/*.c ${DIR_REDIS}/*.c ${DIR_JSON}/*.c ${OBJ_C_SRC} ${DIR_SRC}/main.c ${DIR_SRC}/ImageData2.c ${DIR_SRC}/ImageData.c ${DIR_FONTS}/*.c )
 OBJ_O = $(patsubst %.c,${DIR_BIN}/%.o,$(notdir ${OBJ_C}))
 RPI_DEV_C = $(wildcard $(DIR_BIN)/dev_hardware_SPI.o $(DIR_BIN)/RPI_sysfs_gpio.o $(DIR_BIN)/DEV_Config.o )
 JETSON_DEV_C = $(wildcard $(DIR_BIN)/sysfs_software_spi.o $(DIR_BIN)/sysfs_gpio.o $(DIR_BIN)/DEV_Config.o )
@@ -25,7 +26,7 @@ USELIB_RPI = USE_BCM2835_LIB
 
 LIB_RPI=-Wl,--gc-sections
 ifeq ($(USELIB_RPI), USE_BCM2835_LIB)
-	LIB_RPI += -lbcm2835 -lm -L. -levent -levent_core
+	LIB_RPI += -lbcm2835 -lm -L. -levent -levent_core -ljson-c
 else ifeq ($(USELIB_RPI), USE_WIRINGPI_LIB)
 	LIB_RPI += -lwiringPi -lm 
 else ifeq ($(USELIB_RPI), USE_DEV_LIB)
@@ -63,7 +64,7 @@ JETSON_epd:${OBJ_O}
 $(shell mkdir -p $(DIR_BIN))
 
 ${DIR_BIN}/%.o:$(DIR_SRC)/%.c
-	$(CC) $(CFLAGS) -c	$< -o $@ -I $(DIR_Config) -I $(DIR_GUI) -I $(DIR_REDIS)  -I $(DIR_EPD) $(DEBUG)
+	$(CC) $(CFLAGS) -c	$< -o $@ -I $(DIR_Config) -I $(DIR_GUI) -I $(DIR_REDIS)  -I $(DIR_JSON) -I $(DIR_EPD) $(DEBUG)
 	
 ${DIR_BIN}/%.o:$(DIR_EPD)/%.c
 	$(CC) $(CFLAGS) -c	$< -o $@ -I $(DIR_Config) $(DEBUG)
@@ -75,6 +76,9 @@ ${DIR_BIN}/%.o:$(DIR_GUI)/%.c
 	$(CC) $(CFLAGS) -c	$< -o $@ -I $(DIR_Config) $(DEBUG)
 
 ${DIR_BIN}/%.o:$(DIR_REDIS)/%.c
+	$(CC) $(CFLAGS) -c	$< -o $@ -I $(DIR_Config) $(DEBUG)
+
+${DIR_BIN}/%.o:$(DIR_JSON)/%.c
 	$(CC) $(CFLAGS) -c	$< -o $@ -I $(DIR_Config) $(DEBUG)
 
 RPI_DEV:
