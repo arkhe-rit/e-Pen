@@ -243,5 +243,8 @@ int main(int argc, char *argv[])
     printf("Beginning to exit...\r\n");
     exitDisplay();
 
+    printf("Shutting down...\r\n");
+    execlp("poweroff", "poweroff", (char *)NULL);
+
     return 0;
 }
