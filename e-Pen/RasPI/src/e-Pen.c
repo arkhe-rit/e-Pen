@@ -11,7 +11,7 @@
 #define WHITE 0xFF
 #define BLACK 0x00
 
-#define REDIS_DEFAULT_IP "192.168.2.10"
+#define REDIS_DEFAULT_IP "mothership.local"
 #define REDIS_DEFAULT_PORT 6379
 
 #define REDIS_SUB_CMD "SUBSCRIBE channel projector/eink"
@@ -26,6 +26,14 @@ const char *imgs[NUMBER_OF_IMAGES] = {
 
 UBYTE *blackImg, *redImg;      // Image buffers
 const struct event_base *base; // event base
+
+enum exitState
+{
+    EXIT,
+    REBOOT,
+    SHUTDOWN
+};
+enum exitState state = EXIT; // Tracks state during exit
 
 // Callback for received message
 void onMessage(const redisAsyncContext *c, void *reply, void *privdata)
@@ -74,8 +82,22 @@ void onMessage(const redisAsyncContext *c, void *reply, void *privdata)
 
         if (!strcmp(msgCmd, "shutdown"))
         {
+            state = SHUTDOWN;
             event_base_loopbreak(base);
             return;
+        }
+
+        if (!strcmp(msgCmd, "reboot"))
+        {
+            state = REBOOT;
+            event_base_loopbreak(base);
+            return;
+        }
+
+        if (!strcmp(msgCmd, "exit"))
+        {
+            state = EXIT; // ideally redundant, but just in case
+            event_base_loopbreak(base);
         }
 
         // Parse value
@@ -244,8 +266,22 @@ int main(int argc, char *argv[])
     printf("Beginning to exit...\r\n");
     exitDisplay();
 
-    printf("Shutting down...\r\n");
-    execlp("poweroff", "poweroff", (char *)NULL);
+    switch (state)
+    {
+    case SHUTDOWN:
+        printf("Shutting down...\r\n");
+        execlp("poweroff", "poweroff", (char *)NULL);
+        break;
+    case REBOOT:
+        printf("Rebooting...\r\n");
+        execlp("reboot", "reboot", (char *)NULL);
+        break;
+
+    case EXIT:
+    default:
+        printf("Exiting...\r\n");
+        break;
+    }
 
     return 0;
 }
