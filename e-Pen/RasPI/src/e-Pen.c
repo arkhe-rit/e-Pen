@@ -16,12 +16,13 @@
 
 #define REDIS_SUB_CMD "SUBSCRIBE channel projector/eink"
 
-#define NUMBER_OF_IMAGES 3
-// #define MAX_IMG_PATH_LENGTH 20
+#define NUMBER_OF_IMAGES 5
 const char *imgs[NUMBER_OF_IMAGES] = {
-    "./imgs/Beach_b.bmp",
-    "./imgs/HeWillDie_b.bmp",
-    "./imgs/TravisGoblins_b.bmp"};
+    "./imgs/portrait1.bmp",
+    "./imgs/portrait2.bmp",
+    "./imgs/portrait3.bmp",
+    "./imgs/portrait4.bmp",
+    "./imgs/portrait5.bmp"};
 
 UBYTE *blackImg, *redImg;      // Image buffers
 const struct event_base *base; // event base
@@ -58,16 +59,16 @@ void onMessage(const redisAsyncContext *c, void *reply, void *privdata)
         // Parse type
         if (!json_object_object_get_ex(jobj, "type", &tmp))
             return;
-        char *msgType[json_object_get_string_len(tmp)];
-        memset(msgType, 0, sizeof(char) * json_object_get_string_len(tmp));
+        char msgType[json_object_get_string_len(tmp)];
+        memset(msgType, 0, sizeof(msgType));
         strcpy(msgType, json_object_get_string(tmp));
         printf("Type: %s\r\n", msgType);
 
         // Parse command
         if (!json_object_object_get_ex(jobj, "command", &tmp))
             return;
-        char *msgCmd[json_object_get_string_len(tmp)];
-        memset(msgCmd, 0, sizeof(char) * json_object_get_string_len(tmp));
+        char msgCmd[json_object_get_string_len(tmp)];
+        memset(msgCmd, 0, sizeof(msgCmd));
         strcpy(msgCmd, json_object_get_string(tmp));
         printf("Cmd: %s\r\n", msgCmd);
 
