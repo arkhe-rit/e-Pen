@@ -1,6 +1,15 @@
 {
     "files.associations": {
         "epd_7in5b_v2.h": "c",
-        "dev_config.h": "c"
-    }
+        "dev_config.h": "c",
+        "libevent.h": "c",
+        "array": "c",
+        "compare": "c",
+        "functional": "c",
+        "ratio": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c"
+    },
+    "C_Cpp.errorSquiggles": "enabled"
 }
