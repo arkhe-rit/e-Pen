@@ -244,12 +244,9 @@ int main(int argc, char *argv[])
         switch (opt)
         {
         case 'h':
-            printf("REDISIP optarg: %s", optarg); // DEBUG
             redisIP = optarg;
             break;
         case 'p':
-            printf("REDISPORT optarg: %s\r\n", optarg);
-            printf("REDISPORT atoi: %i", atoi(optarg));
             atoi(optarg) ? redisPort = atoi(optarg) : 1;
             break;
         case 'S':
