@@ -7,6 +7,7 @@
 #include <string.h>
 #include <signal.h>
 #include <json.h>
+#include <unistd.h>
 
 #define WHITE 0xFF
 #define BLACK 0x00
@@ -233,8 +234,29 @@ int main(int argc, char *argv[])
     }
 
     // Parse user input
+    int opt;
     char *redisIP = REDIS_DEFAULT_IP;
     int redisPort = REDIS_DEFAULT_PORT;
+    int displaySplash = 1;
+
+    while ((opt = getopt(argc, argv, "h:p:S")) != -1)
+    {
+        switch (opt)
+        {
+        case 'h':
+            printf("REDISIP optarg: %s", optarg); // DEBUG
+            redisIP = optarg;
+            break;
+        case 'p':
+            printf("REDISPORT optarg: %s\r\n", optarg);
+            printf("REDISPORT atoi: %i", atoi(optarg));
+            atoi(optarg) ? redisPort = atoi(optarg) : 1;
+            break;
+        case 'S':
+            displaySplash = 0;
+            break;
+        }
+    }
 
     printf("Arkhe e-Pen for Waveshare 7.5\" (B)\r\n");
 
@@ -246,12 +268,13 @@ int main(int argc, char *argv[])
     initDisplayMemory();
     printf("e-Paper Initialized!\r\n");
 
-    displaySplashScreen();
+    if (displaySplash)
+        displaySplashScreen();
 
     EPD_7IN5B_V2_Sleep();
 
     // Create connection to Redis
-    printf("Attempting to connect to Redis...\r\n");
+    printf("Attempting to connect to Redis @ %s:%i...\r\n", redisIP, redisPort);
     base = event_base_new();
     redisAsyncContext *c = redisAsyncConnect(redisIP, redisPort);
     if (c->err)
