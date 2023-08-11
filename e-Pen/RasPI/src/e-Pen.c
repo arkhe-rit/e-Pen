@@ -160,6 +160,44 @@ void loadAndDrawBMP(const char *blackBMPPath)
     printf("Ready!\r\n\n");
 }
 
+void initDisplayMemory()
+{
+    printf("Initializing e-Paper Display...\r\n");
+    EPD_7IN5B_V2_Init();
+
+    // Init image memory
+    UWORD imageSize = ((EPD_7IN5B_V2_WIDTH % 8 == 0) ? (EPD_7IN5B_V2_WIDTH / 8) : (EPD_7IN5B_V2_WIDTH / 8 + 1)) * EPD_7IN5B_V2_HEIGHT;
+    if ((blackImg = (UBYTE *)malloc(imageSize)) == NULL)
+    {
+        printf("Failed to apply for black memory...\r\n");
+        return -1;
+    }
+    if ((redImg = (UBYTE *)malloc(imageSize)) == NULL)
+    {
+        printf("Failed to apply for red memory...\r\n");
+        return -1;
+    }
+
+    // Clearing image buffers
+    printf("Creating image buffers...\r\n");
+    Paint_NewImage(blackImg, EPD_7IN5B_V2_WIDTH, EPD_7IN5B_V2_HEIGHT, 0, WHITE);
+    Paint_NewImage(redImg, EPD_7IN5B_V2_WIDTH, EPD_7IN5B_V2_HEIGHT, 0, WHITE);
+}
+
+// Displays Arkhe Logo
+void displaySplashScreen()
+{
+    Paint_SelectImage(blackImg);
+    Paint_Clear(WHITE);
+    GUI_ReadBmp("./imgs/ArkheLogo_b.bmp", 0, 0);
+
+    Paint_SelectImage(redImg);
+    Paint_Clear(WHITE);
+    GUI_ReadBmp("./imgs/ArkheLogo_r.bmp", 0, 0);
+
+    EPD_7IN5B_V2_Display(blackImg, redImg);
+}
+
 // Clears screen and safely shutdown the EPD
 void exitDisplay()
 {
@@ -187,11 +225,16 @@ int main(int argc, char *argv[])
 {
     // UNIX moment
     signal(SIGPIPE, SIG_IGN);
+
     if (geteuid())
     {
         printf("ERROR: Please run this program as root.\r\n");
         return 1;
     }
+
+    // Parse user input
+    char *redisIP = REDIS_DEFAULT_IP;
+    int redisPort = REDIS_DEFAULT_PORT;
 
     printf("Arkhe e-Pen for Waveshare 7.5\" (B)\r\n");
 
@@ -200,46 +243,17 @@ int main(int argc, char *argv[])
     {
         return -1;
     }
+    initDisplayMemory();
+    printf("e-Paper Initialized!\r\n");
 
-    printf("e-Paper Init and Clear...\r\n");
-    EPD_7IN5B_V2_Init();
-
-    // Init image memory
-    UWORD imageSize = ((EPD_7IN5B_V2_WIDTH % 8 == 0) ? (EPD_7IN5B_V2_WIDTH / 8) : (EPD_7IN5B_V2_WIDTH / 8 + 1)) * EPD_7IN5B_V2_HEIGHT;
-    if ((blackImg = (UBYTE *)malloc(imageSize)) == NULL)
-    {
-        printf("Failed to apply for black memory...\r\n");
-        return -1;
-    }
-    if ((redImg = (UBYTE *)malloc(imageSize)) == NULL)
-    {
-        printf("Failed to apply for red memory...\r\n");
-        return -1;
-    }
-
-    // Creating image buffers
-    printf("Creating image buffers...\r\n");
-    Paint_NewImage(blackImg, EPD_7IN5B_V2_WIDTH, EPD_7IN5B_V2_HEIGHT, 0, WHITE);
-    Paint_NewImage(redImg, EPD_7IN5B_V2_WIDTH, EPD_7IN5B_V2_HEIGHT, 0, WHITE);
-
-    // Display Arkhe logo
-    Paint_SelectImage(blackImg);
-    Paint_Clear(WHITE);
-    GUI_ReadBmp("./imgs/ArkheLogo_b.bmp", 0, 0);
-
-    Paint_SelectImage(redImg);
-    Paint_Clear(WHITE);
-    GUI_ReadBmp("./imgs/ArkheLogo_r.bmp", 0, 0);
-
-    EPD_7IN5B_V2_Display(blackImg, redImg);
+    displaySplashScreen();
 
     EPD_7IN5B_V2_Sleep();
 
     // Create connection to Redis
     printf("Attempting to connect to Redis...\r\n");
     base = event_base_new();
-
-    redisAsyncContext *c = redisAsyncConnect(REDIS_DEFAULT_IP, REDIS_DEFAULT_PORT);
+    redisAsyncContext *c = redisAsyncConnect(redisIP, redisPort);
     if (c->err)
     {
         printf("Error: %s\n", c->errstr);
